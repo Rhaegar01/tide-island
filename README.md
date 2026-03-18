@@ -1,7 +1,7 @@
-# Dynamic-islalnd-on-hyprland
+# Dynamic-island-on-hyprland
 - Dynamic Island is a smooth, flexible, and fast interactive island component designed for Hyprland users.
 
-- Based on Quickshell and C.
+- Based on Quickshell and C++ /Qt 6.
 
 - Pursuting lightweight, smooth anim, and low-latency performance. (Talking about some latency)
 
@@ -9,9 +9,9 @@
 
 ### usage:
 
-Memory usage: 20-35Mb
+Memory usage: 30-60Mb
 
-CPU usage: 0.8% - 1.2%
+CPU usage < 0.1%
 
 #### style 1: normal - only show time
 
@@ -39,7 +39,14 @@ CPU usage: 0.8% - 1.2%
   <img src="Preview/Preview_5.png" width="450" alt="Preview">
 </div>
 
-#### style 4: expanded - when click/ song changes
+#### style 4: control-center - when right click
+
+<div align="left">
+  <img src="Preview/Preview_7.png" width="450" alt="Preview">
+</div>
+
+
+#### style 5: expanded - when click/ song changes
 
 <div align="left">
   <img src="Preview/Preview_6.png" width="450" alt="Preview">
@@ -49,30 +56,48 @@ CPU usage: 0.8% - 1.2%
 
 - Quickshell
 
-- socat
+- Qt6 (base & declarative)
+
+- Hyprland
+
+- cmake
+
+- gcc
 
 - pactl & pipewire
 
+- MPRIS-compatible player 
+
 - JetBrainsMono Nerd Font (necessary)
 
+- Custom scripts
+
 ### Compile & run:
+
+- Download 
 ```bash
 git clone https://github.com/enhaoswen/Dynamic-Island-on-Hyprland.git
 cd Dynamic-Island-on-Hyprland
-
-gcc -O3 island_backend.c -o island_backend
-
-mkdir -p ~/.config/quickshell
-mv island_backend *.qml ~/.config/quickshell/
-
-cd .. && rm -rf Dynamic-Island-on-Hyprland
-
-quickshell
+rm -rf Preview/
 ```
-## Repeating important things three times
 
-**Make sure island_backend is in .config/quickshell, or else pls change the path in shell.qml:134**
+> make sure you change the program if is necessary, check important things at the end.
 
-**Make sure island_backend is in .config/quickshell, or else pls change the path in shell.qml:134**
 
-**Make sure island_backend is in .config/quickshell, or else pls change the path in shell.qml:134**
+- Build 
+
+```bash
+mkdir build && cd build && cmake .. && make -j$(nproc)
+```
+
+- Clean 
+
+```bash
+mkdir -p ~/.config/quickshell/IslandBackend
+mv libIslandBackendplugin.so qmldir ~/.config/quickshell/IslandBackend/ && mv ../*.qml ~/.config/quickshell/
+cd ../.. && rm -rf Dynamic-Island-on-Hyprland 
+```
+
+## Important thing
+
+**For custom scripts, please make your own and change the path in shell.qml:465 (check Comment)**

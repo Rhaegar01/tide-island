@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Io
+import IslandBackend
 
 PanelWindow {
     id: root
@@ -52,15 +53,10 @@ PanelWindow {
 
         Behavior on osdProgress { SmoothedAnimation { velocity: 1.2; duration: 180; easing.type: Easing.InOutQuad } }
 
-        function triggerSplitEvent(icon, shouldShake, progress, customText, priority) {
+        function triggerSplitEvent(icon, shouldShake, progress, customText) {
             if (shouldShake === undefined) shouldShake = true;
             if (progress === undefined)    progress = -1.0;
             if (customText === undefined)  customText = "";
-            if (priority === undefined)    priority = 0; 
-
-            let now = new Date().getTime();
-            if (now < lockEndTime && priority < 1) return;
-            if (priority >= 1) lockEndTime = now + 2500;
 
             splitIcon = icon; osdCustomText = customText; osdProgressTarget = progress;
             if (progress >= 0) osdProgress = progress;
@@ -82,29 +78,11 @@ PanelWindow {
 
         Timer { id: autoHideTimer; interval: 2500; onTriggered: islandContainer.smartRestoreState() }
 
-        // --- Hyprland 工作区监听 ---
-        Process {
-            id: hyprlandSocketListener
-            command: ["sh", "-c", "socat -U - UNIX-CONNECT:$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => {
-                    let msg = data.trim();
-                    if (msg.startsWith("workspace>>")) {
-                        islandContainer.currentWs = parseInt(msg.split(">>")[1]);
-                        islandContainer.islandState = "long_capsule";
-                        autoHideTimer.restart();
-                    }
-                }
-            }
-        }
-
         function getWorkspaceIcon(wsId) {
             const icons = { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "󰙯", 7: "󰈙", 8: "󰇮", 9: "󰊴", 10: "", "urgent": "" };
             return icons[wsId] || ""; 
         }
 
-        // --- 蓝牙与音量控制防抖 ---
         Timer { id: btBlockVolTimer; interval: 2000; onTriggered: islandContainer.btJustConnected = false }
         Timer {
             id: volDebounce
@@ -128,42 +106,44 @@ PanelWindow {
             }
         }
 
-        // --- C Backend 状态监听 (亮度/音量/电池/Caps/BT) ---
-        Process {
-            id: cBackendListener
-            command: ["sh", "-c", "$HOME/.config/quickshell/island_backend"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => {
-                    let msg = data.trim();
-                    if (!msg) return;
-                    let parts = msg.split("|");
+        Connections {
+            target: SysBackend
 
-                    if (parts[0] === "CAPS" && parts.length === 2) {
-                        let isOn = parts[1] === "1";
-                        islandContainer.triggerSplitEvent(isOn ? "" : "", true, -1.0, isOn ? "Caps Lock ON" : "Caps Lock OFF", 1);
-                    } else if (parts[0] === "BL" && parts.length === 3) {
-                        let max = parseFloat(parts[2]);
-                        if (max > 0) { islandContainer._pendingBlVal = parseFloat(parts[1]) / max; blDebounce.restart(); }
-                    } else if ((parts[0] === "VOL" || parts[0] === "MUTE") && parts.length === 2) {
-                        islandContainer._pendingVolType = parts[0];
-                        let volVal = parseInt(parts[1]);
-                        if (!isNaN(volVal)) { islandContainer._pendingVolVal = volVal / 100.0; volDebounce.restart(); }
-                    } else if (parts[0] === "BAT" && parts.length === 3) {
-                        islandContainer.batteryCapacity = parseInt(parts[1]);
-                        let currentStatus = parts[2];
-                        islandContainer.isCharging = (currentStatus === "Charging" || currentStatus === "Full");
-                        if (islandContainer._lastChargeStatus !== "" && islandContainer._lastChargeStatus !== currentStatus) {
-                            if (currentStatus === "Charging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
-                            else if (currentStatus === "Discharging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
-                        }
-                        islandContainer._lastChargeStatus = currentStatus;
-                    } else if (parts[0] === "BT") {
-                        islandContainer.btJustConnected = true; btBlockVolTimer.restart();
-                        if (parts[1] === "CONN") islandContainer.triggerSplitEvent("󰋋", true, -1.0, "Connected", 1);
-                        else islandContainer.triggerSplitEvent("󰋋", true, -1.0, "Disconnected", 1);
-                    }
+            function onWorkspaceChanged(wsId) {
+                islandContainer.currentWs = wsId;
+                islandContainer.islandState = "long_capsule";
+                autoHideTimer.restart();
+            }
+
+            function onVolumeChanged(volPercentage, isMuted) {
+                islandContainer._pendingVolType = isMuted ? "MUTE" : "VOL";
+                islandContainer._pendingVolVal = volPercentage / 100.0;
+                volDebounce.restart();
+            }
+
+            function onBatteryChanged(capacity, statusString) {
+                islandContainer.batteryCapacity = capacity;
+                islandContainer.isCharging = (statusString === "Charging" || statusString === "Full");
+                if (islandContainer._lastChargeStatus !== "" && islandContainer._lastChargeStatus !== statusString) {
+                    if (statusString === "Charging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
+                    else if (statusString === "Discharging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
                 }
+                islandContainer._lastChargeStatus = statusString;
+            }
+
+            function onBrightnessChanged(val) {
+                islandContainer._pendingBlVal = val;
+                blDebounce.restart();
+            }
+
+            function onCapsLockChanged(isOn) {
+                islandContainer.triggerSplitEvent(isOn ? "" : "", true, -1.0, isOn ? "Caps Lock ON" : "Caps Lock OFF", 1);
+            }
+
+            function onBluetoothChanged(isConnected) {
+                islandContainer.btJustConnected = true; 
+                btBlockVolTimer.restart();
+                islandContainer.triggerSplitEvent("󰋋", true, -1.0, isConnected ? "Connected" : "Disconnected", 1);
             }
         }
 
@@ -189,13 +169,13 @@ PanelWindow {
             return playersList[0];
         }
 
-        property string currentTrack:   activePlayer ? (activePlayer.trackTitle  || activePlayer.title  || "未知曲目") : ""
+        property string currentTrack:   activePlayer ? (activePlayer.trackTitle  || activePlayer.title  || "Unknown") : ""
         property string currentArtist: {
             if (!activePlayer) return "";
             let a = activePlayer.artist;
             if (!a && activePlayer.metadata) a = activePlayer.metadata["xesam:artist"];
             if (a) return Array.isArray(a) ? a.join(", ") : String(a);
-            return "未知歌手";
+            return "Unknown";
         }
         property string currentArtUrl:  activePlayer ? (activePlayer.trackArtUrl || activePlayer.artUrl || "") : ""
         property real   trackProgress: 0
@@ -263,13 +243,29 @@ PanelWindow {
             Behavior on radius { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
 
             MouseArea {
-                anchors.fill: parent; z: -1
-                onClicked: {
+              anchors.fill: parent; z: -1
+              acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: (mouse) => {
+                  if (mouse.button === Qt.LeftButton){
                     if (islandContainer.islandState === "expanded") {
-                        islandContainer.islandState = "normal"; islandContainer.osdProgress = -1.0; islandContainer.osdCustomText = "";
+                      islandContainer.islandState = "normal"; 
+                      islandContainer.osdProgress = -1.0;
+                      islandContainer.osdCustomText = "";
                     } else {
-                        islandContainer.islandState = "expanded"; autoHideTimer.restart();
+                      islandContainer.islandState = "expanded"; 
+                      autoHideTimer.restart();
                     }
+                  }
+                  else {
+                      if (islandContainer.islandState === "control_center") {
+                          islandContainer.islandState = "normal"; 
+                          islandContainer.osdProgress = -1.0; 
+                          islandContainer.osdCustomText = "";
+                      } else {
+                          islandContainer.islandState = "control_center"; 
+                          autoHideTimer.stop(); 
+                      }
+                  } 
                 }
             }
 
@@ -354,7 +350,7 @@ PanelWindow {
                         }
                         Row {
                             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 8
-                            Text { text: ""; color: "#ffcc00"; font.pixelSize: 14; font.family: "JetBrainsMono Nerd Font"; visible: islandContainer.isCharging; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: ""; color: "#ffffff"; font.pixelSize: 14; font.family: "JetBrainsMono Nerd Font"; visible: islandContainer.isCharging; anchors.verticalCenter: parent.verticalCenter }
                             Text { text: islandContainer.batteryCapacity + "%"; color: "white"; font.pixelSize: 14; font.bold: true; font.family: "JetBrainsMono Nerd Font"; anchors.verticalCenter: parent.verticalCenter }
                             Item {
                                 width: 28; height: 14; anchors.verticalCenter: parent.verticalCenter
@@ -450,14 +446,133 @@ PanelWindow {
                         }
                     }
                 }
-            }
+              }
+          // --- 内容层 4: 横向控制中心 ---
+              Item {
+                  id: controlLayer
+                  anchors.fill: parent
+
+                  readonly property bool showCondition: islandContainer.islandState === "control_center"
+                  opacity: showCondition ? 1 : 0
+                  visible: opacity > 0
+                  Behavior on opacity {
+                      NumberAnimation {
+                          duration: controlLayer.showCondition ? 300 : 100
+                          easing.type: Easing.InOutQuad
+                      }
+                  }
+
+                  Row {
+                      anchors.centerIn: parent
+                      spacing: 35
+                      
+                      Item {
+                          width: 30; height: 30
+                          scale: wifiArea.pressed ? 0.8 : 1.0
+                          Behavior on scale { NumberAnimation { duration: 100 } }
+                          Process {
+                            id: wifiProc
+                            command: ["sh", "-c", "~/.config/quickshell/wifi-menu.sh"]
+                          }
+                          Text {
+                              anchors.centerIn: parent
+                              text: ""
+                              color: "white"
+                              font.pixelSize: 20
+                              font.family: "JetBrainsMono Nerd Font"
+                          }
+                          MouseArea {
+                              id: wifiArea
+                              anchors.fill: parent
+                              onClicked: {
+                                  wifiProc.running = true
+
+                              }
+                          }
+                      }
+
+                      Item {
+                          width: 30; height: 30
+                          scale: btArea.pressed ? 0.8 : 1.0
+                          Behavior on scale { NumberAnimation { duration: 100 } }
+                          Process {
+                            id: btproc
+                            command: ["sh", "-c", "~/.config/quickshell/bluetooth-menu.sh"]
+                          }
+                          Text {
+                              anchors.centerIn: parent
+                              text: ""
+                              color: "white"
+                              font.pixelSize: 20
+                              font.family: "JetBrainsMono Nerd Font"
+                          }
+                          MouseArea {
+                              id: btArea
+                              anchors.fill: parent
+                              onClicked: {
+                                  btproc.running = true
+                              }
+                          }
+                      }
+
+                      Item {
+                          width: 30; height: 30
+                          scale: wpArea.pressed ? 0.8 : 1.0
+                          Behavior on scale { NumberAnimation { duration: 100 } }
+                          Process {
+                            id: wpproc
+                            command: ["sh", "-c", "~/.config/quickshell/wallpaper-switch.sh"]
+                          }
+                          Text {
+                              anchors.centerIn: parent
+                              text: "󰋩"
+                              color: "white"
+                              font.pixelSize: 20
+                              font.family: "JetBrainsMono Nerd Font"
+                          }
+                          MouseArea {
+                              id: wpArea
+                              anchors.fill: parent
+                              onClicked: {
+                                wpproc.running = true
+                              }
+                          }
+                      }
+
+                      Item {
+                          width: 30; height: 30
+                          scale: extraArea.pressed ? 0.8 : 1.0
+                          Behavior on scale { NumberAnimation { duration: 100 } }
+                          Process {
+                            id: powerproc
+                            command: ["sh", "-c", "~/.config/quickshell/powermenu"]
+                          }
+                          Text {
+                              anchors.centerIn: parent
+                              text: "󰣇"
+                              color: "white"
+                              font.pixelSize: 20
+                              font.family: "JetBrainsMono Nerd Font"
+                          }
+                          MouseArea {
+                              id: extraArea
+                              anchors.fill: parent
+                              onClicked: {
+                                powerproc.running = true
+                              }
+                          }
+                      }
+                  }
+              }
+
         }
 
         states: [
-            State { name: "normal";       when: islandContainer.islandState === "normal";       PropertyChanges { target: mainCapsule; width: 140; height: 38; radius: 19 } },
-            State { name: "split";        when: islandContainer.islandState === "split";        PropertyChanges { target: mainCapsule; width: 160; height: 38; radius: 19 } },
-            State { name: "long_capsule"; when: islandContainer.islandState === "long_capsule"; PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
-            State { name: "expanded";     when: islandContainer.islandState === "expanded";     PropertyChanges { target: mainCapsule; width: 400; height: 165; radius: 40 } }
+            State { name: "normal";        when: islandContainer.islandState === "normal";         PropertyChanges { target: mainCapsule; width: 140; height: 38; radius: 19 } },
+            State { name: "split";         when: islandContainer.islandState === "split";          PropertyChanges { target: mainCapsule; width: 160; height: 38; radius: 19 } },
+            State { name: "long_capsule"; when: islandContainer.islandState === "long_capsule";   PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
+            State {name: "control_center";when: islandContainer.islandState === "control_center"; PropertyChanges { target: mainCapsule; width: 300; height: 38; radius: 19 } },
+            State { name: "expanded";      when: islandContainer.islandState === "expanded";       PropertyChanges { target: mainCapsule; width: 400; height: 165; radius: 40 } }
         ]
     }
 }
