@@ -18,6 +18,19 @@ PanelWindow {
     QtObject {
         id: timeObj
         property string currentTime: "00:00"
+        property string currentDateTime: "Jan 01 00:00"
+        readonly property var monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+        function padTwoDigits(value) {
+            return value < 10 ? "0" + value : String(value);
+        }
+
+        function formatDateTime24(now) {
+            return monthNames[now.getMonth()]
+                + " " + padTwoDigits(now.getDate())
+                + " " + padTwoDigits(now.getHours())
+                + ":" + padTwoDigits(now.getMinutes());
+        }
     }
     Timer {
         id: clockTimer
@@ -26,6 +39,7 @@ PanelWindow {
         onTriggered: {
             let now = new Date();
             timeObj.currentTime = Qt.formatTime(now, "hh:mm ap");
+            timeObj.currentDateTime = timeObj.formatDateTime24(now);
             interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
         }
     }
@@ -52,13 +66,21 @@ PanelWindow {
         property real   _lastVolVal:  -1.0
         property bool btJustConnected: false
         property real   _pendingBlVal:  0.0
+        property real swipeTransitionProgress: 0
         readonly property bool splitShowsProgress: islandState === "split" && osdProgress >= 0
         readonly property bool splitShowsText: islandState === "split" && osdProgress < 0 && osdCustomText !== ""
         readonly property bool splitShowsIconOnly: islandState === "split" && osdProgress < 0 && osdCustomText === ""
         readonly property bool splitUsesExtendedLayout: splitShowsProgress || splitShowsText
         readonly property real splitCapsuleWidth: splitShowsProgress ? 248 : (splitShowsText ? 220 : 140)
+        readonly property bool canShowDateTimeSwipe: islandState === "normal" || islandState === "long_capsule" || islandState === "date_time"
 
         Behavior on osdProgress { SmoothedAnimation { velocity: 1.2; duration: 180; easing.type: Easing.InOutQuad } }
+        Behavior on swipeTransitionProgress {
+            NumberAnimation {
+                duration: capsuleMouseArea.pressed ? 0 : 220
+                easing.type: Easing.OutCubic
+            }
+        }
 
         function triggerSplitEvent(icon, shouldShake, progress, customText) {
             if (shouldShake === undefined) shouldShake = true;
@@ -80,6 +102,23 @@ PanelWindow {
             islandState = "normal";
             osdProgress = -1.0;
             osdCustomText = "";
+            swipeTransitionProgress = 0;
+        }
+
+        function showDateTimeCapsule() {
+            islandState = "date_time";
+            osdProgress = -1.0;
+            osdCustomText = "";
+            swipeTransitionProgress = 1;
+            autoHideTimer.stop();
+        }
+
+        function showTimeCapsule() {
+            islandState = "normal";
+            osdProgress = -1.0;
+            osdCustomText = "";
+            swipeTransitionProgress = 0;
+            autoHideTimer.stop();
         }
 
         Timer { id: autoHideTimer; interval: 2500; onTriggered: islandContainer.smartRestoreState() }
@@ -249,9 +288,82 @@ PanelWindow {
             Behavior on radius { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
 
             MouseArea {
-              anchors.fill: parent; z: -1
-              acceptedButtons: Qt.LeftButton | Qt.RightButton
+                id: capsuleMouseArea
+                anchors.fill: parent
+                z: -1
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                preventStealing: true
+                property real swipeStartX: 0
+                property real swipeStartY: 0
+                property real swipeStartProgress: 0
+                property bool swipeArmed: false
+                property bool swipePassedThreshold: false
+                property bool swipeMoved: false
+                property bool suppressNextClick: false
+
+                Timer {
+                    id: swipeSuppressReset
+                    interval: 180
+                    repeat: false
+                    onTriggered: capsuleMouseArea.suppressNextClick = false
+                }
+
+                onPressed: (mouse) => {
+                    swipeStartX = mouse.x;
+                    swipeStartY = mouse.y;
+                    swipeArmed = mouse.button === Qt.LeftButton && islandContainer.canShowDateTimeSwipe;
+                    swipeStartProgress = islandContainer.islandState === "date_time" ? 1 : 0;
+                    swipePassedThreshold = false;
+                    swipeMoved = false;
+                    islandContainer.swipeTransitionProgress = swipeStartProgress;
+                }
+
+                onPositionChanged: (mouse) => {
+                    if (!pressed || !swipeArmed || suppressNextClick) return;
+
+                    const deltaX = mouse.x - swipeStartX;
+                    const deltaY = Math.abs(mouse.y - swipeStartY);
+                    const adjustedDeltaX = deltaY < 24 ? deltaX : 0;
+                    const nextProgress = Math.max(0, Math.min(1, swipeStartProgress + adjustedDeltaX / 108));
+
+                    swipeMoved = swipeMoved || Math.abs(adjustedDeltaX) > 6 || deltaY > 6;
+                    islandContainer.swipeTransitionProgress = nextProgress;
+                    if (swipeStartProgress < 0.5) swipePassedThreshold = nextProgress >= 0.56;
+                    else swipePassedThreshold = nextProgress <= 0.44;
+                }
+
+                onReleased: {
+                    if (swipeMoved) {
+                        suppressNextClick = true;
+                        swipeSuppressReset.restart();
+                    }
+                    if (swipeArmed && swipePassedThreshold) {
+                        if (swipeStartProgress < 0.5) islandContainer.showDateTimeCapsule();
+                        else islandContainer.showTimeCapsule();
+                    } else {
+                        islandContainer.swipeTransitionProgress = swipeStartProgress;
+                    }
+                    swipeArmed = false;
+                    swipePassedThreshold = false;
+                    swipeMoved = false;
+                }
+
+                onCanceled: {
+                    swipeArmed = false;
+                    swipePassedThreshold = false;
+                    swipeMoved = false;
+                    suppressNextClick = false;
+                    swipeSuppressReset.stop();
+                    islandContainer.swipeTransitionProgress = islandContainer.islandState === "date_time" ? 1 : 0;
+                }
+
                 onClicked: (mouse) => {
+                  if (suppressNextClick) {
+                    swipeSuppressReset.stop();
+                    suppressNextClick = false;
+                    return;
+                  }
+
                   if (mouse.button === Qt.LeftButton){
                     if (islandContainer.islandState === "expanded") {
                       islandContainer.islandState = "normal"; 
@@ -275,10 +387,15 @@ PanelWindow {
                 }
             }
 
-            ClockLayer {
-                currentTime: timeObj.currentTime
+            SwipeDatePreviewLayer {
+                leadingText: timeObj.currentDateTime
+                trailingText: timeObj.currentTime
                 heroFontFamily: root.heroFontFamily
+                textPixelSize: 18
+                transitionProgress: islandContainer.swipeTransitionProgress
                 showCondition: islandContainer.islandState === "normal"
+                    || islandContainer.islandState === "date_time"
+                    || (islandContainer.islandState === "long_capsule" && islandContainer.swipeTransitionProgress > 0)
             }
 
             SplitIconLayer {
@@ -300,9 +417,10 @@ PanelWindow {
             WorkspaceLayer {
                 workspaceId: islandContainer.currentWs
                 workspaceIcon: islandContainer.getWorkspaceIcon(islandContainer.currentWs)
+                displayText: "Workspace " + islandContainer.currentWs
                 iconFontFamily: root.iconFontFamily
                 textFontFamily: root.textFontFamily
-                showCondition: islandContainer.islandState === "long_capsule"
+                showCondition: islandContainer.islandState === "long_capsule" && islandContainer.swipeTransitionProgress < 0.001
             }
 
             ExpandedPlayerLayer {
@@ -331,6 +449,7 @@ PanelWindow {
             State { name: "normal";        when: islandContainer.islandState === "normal";         PropertyChanges { target: mainCapsule; width: 140; height: 38; radius: 19 } },
             State { name: "split";         when: islandContainer.islandState === "split";          PropertyChanges { target: mainCapsule; width: islandContainer.splitCapsuleWidth; height: 38; radius: 19 } },
             State { name: "long_capsule"; when: islandContainer.islandState === "long_capsule";   PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
+            State { name: "date_time";    when: islandContainer.islandState === "date_time";      PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
             State {name: "control_center";when: islandContainer.islandState === "control_center"; PropertyChanges { target: mainCapsule; width: 300; height: 38; radius: 19 } },
             State { name: "expanded";      when: islandContainer.islandState === "expanded";       PropertyChanges { target: mainCapsule; width: 400; height: 165; radius: 40 } }
         ]
