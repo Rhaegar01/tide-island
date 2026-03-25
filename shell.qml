@@ -5,10 +5,14 @@ import IslandBackend
 
 PanelWindow {
     id: root
+    UserConfig {
+        id: userConfig
+    }
+
     color: "transparent"
     anchors { top: true; left: true; right: true }
     mask: Region { item: mainCapsule }
-    implicitHeight: 300
+    implicitHeight: 360
     exclusiveZone: 45
     readonly property string iconFontFamily: "JetBrainsMono Nerd Font"
     readonly property string textFontFamily: "Inter"
@@ -18,8 +22,10 @@ PanelWindow {
     QtObject {
         id: timeObj
         property string currentTime: "00:00"
+        property string currentDateLabel: "Mon, Jan 01"
         property string currentDateTime: "Jan 01 00:00"
         readonly property var monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        readonly property var dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
         function padTwoDigits(value) {
             return value < 10 ? "0" + value : String(value);
@@ -31,6 +37,14 @@ PanelWindow {
                 + " " + padTwoDigits(now.getHours())
                 + ":" + padTwoDigits(now.getMinutes());
         }
+
+        function formatDateLabel(now) {
+            return dayNames[now.getDay()]
+                + ", "
+                + monthNames[now.getMonth()]
+                + " "
+                + padTwoDigits(now.getDate());
+        }
     }
     Timer {
         id: clockTimer
@@ -39,6 +53,7 @@ PanelWindow {
         onTriggered: {
             let now = new Date();
             timeObj.currentTime = Qt.formatTime(now, "hh:mm ap");
+            timeObj.currentDateLabel = timeObj.formatDateLabel(now);
             timeObj.currentDateTime = timeObj.formatDateTime24(now);
             interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
         }
@@ -50,15 +65,16 @@ PanelWindow {
         anchors.fill: parent
 
         property string islandState: "normal"
-        property string splitIcon: "🎧"
+        property string splitIcon: userConfig.statusIcons["default"]
         property real osdProgressTarget: -1.0
         property real osdProgress: -1.0
         property string osdCustomText: ""
-        property bool shakeCooling: false
         property real lockEndTime: 0
         property int currentWs: 1
         property int batteryCapacity: SysBackend.batteryCapacity
         property bool isCharging: SysBackend.batteryStatus === "Charging" || SysBackend.batteryStatus === "Full"
+        property real currentVolume: -1
+        property real currentBrightness: -1
         property string _lastChargeStatus: SysBackend.batteryStatus
         property string _pendingVolType: ""
         property real   _pendingVolVal:  0.0
@@ -87,16 +103,15 @@ PanelWindow {
             if (progress === undefined)    progress = -1.0;
             if (customText === undefined)  customText = "";
 
+            if (islandState === "control_center") return;
+
             splitIcon = icon; osdCustomText = customText; osdProgressTarget = progress;
             if (progress >= 0) osdProgress = progress;
             else osdProgress = -1.0;
 
             islandState = "split";
-            if (shouldShake && !shakeCooling) { shakeAnim.restart(); shakeCooling = true; shakeCoolTimer.restart(); }
             autoHideTimer.restart();
         }
-
-        Timer { id: shakeCoolTimer; interval: 250; onTriggered: islandContainer.shakeCooling = false }
 
         function smartRestoreState() {
             islandState = "normal";
@@ -124,8 +139,7 @@ PanelWindow {
         Timer { id: autoHideTimer; interval: 2500; onTriggered: islandContainer.smartRestoreState() }
 
         function getWorkspaceIcon(wsId) {
-            const icons = { 1: "", 2: "", 3: "", 4: "", 5: "", 6: "󰙯", 7: "󰈙", 8: "󰇮", 9: "󰊴", 10: "", "urgent": "" };
-            return icons[wsId] || ""; 
+            return userConfig.workspaceIcon(wsId);
         }
 
         Timer { id: btBlockVolTimer; interval: 2000; onTriggered: islandContainer.btJustConnected = false }
@@ -136,7 +150,14 @@ PanelWindow {
                 if (islandContainer.btJustConnected) return;
                 if (islandContainer._pendingVolType !== islandContainer._lastVolType || Math.abs(islandContainer._pendingVolVal - islandContainer._lastVolVal) > 0.001) {
                     islandContainer._lastVolType = islandContainer._pendingVolType; islandContainer._lastVolVal  = islandContainer._pendingVolVal;
-                    islandContainer.triggerSplitEvent(islandContainer._pendingVolType === "MUTE" ? "󰝟" : "󰕾", true, islandContainer._pendingVolVal, "");
+                    islandContainer.triggerSplitEvent(
+                        islandContainer._pendingVolType === "MUTE"
+                            ? userConfig.statusIcons["mute"]
+                            : userConfig.statusIcons["volume"],
+                        true,
+                        islandContainer._pendingVolVal,
+                        ""
+                    );
                 }
             }
         }
@@ -144,9 +165,9 @@ PanelWindow {
             id: blDebounce
             interval: 16
             onTriggered: {
-                let icon = "󰃠";
-                if (islandContainer._pendingBlVal < 0.3) icon = "󰃞";
-                else if (islandContainer._pendingBlVal < 0.7) icon = "󰃟";
+                let icon = userConfig.statusIcons["brightnessHigh"];
+                if (islandContainer._pendingBlVal < 0.3) icon = userConfig.statusIcons["brightnessLow"];
+                else if (islandContainer._pendingBlVal < 0.7) icon = userConfig.statusIcons["brightnessMedium"];
                 islandContainer.triggerSplitEvent(icon, true, islandContainer._pendingBlVal, "");
             }
         }
@@ -156,6 +177,7 @@ PanelWindow {
 
             function onWorkspaceChanged(wsId) {
                 islandContainer.currentWs = wsId;
+                if (islandContainer.islandState === "control_center") return;
                 islandContainer.islandState = "long_capsule";
                 autoHideTimer.restart();
             }
@@ -163,6 +185,7 @@ PanelWindow {
             function onVolumeChanged(volPercentage, isMuted) {
                 islandContainer._pendingVolType = isMuted ? "MUTE" : "VOL";
                 islandContainer._pendingVolVal = volPercentage / 100.0;
+                islandContainer.currentVolume = volPercentage / 100.0;
                 volDebounce.restart();
             }
 
@@ -170,25 +193,38 @@ PanelWindow {
                 islandContainer.batteryCapacity = capacity;
                 islandContainer.isCharging = (statusString === "Charging" || statusString === "Full");
                 if (islandContainer._lastChargeStatus !== "" && islandContainer._lastChargeStatus !== statusString) {
-                    if (statusString === "Charging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
-                    else if (statusString === "Discharging") islandContainer.triggerSplitEvent("", true, -1.0, ""); 
+                    if (statusString === "Charging") islandContainer.triggerSplitEvent(userConfig.statusIcons["charging"], true, -1.0, "");
+                    else if (statusString === "Discharging") islandContainer.triggerSplitEvent(userConfig.statusIcons["discharging"], true, -1.0, "");
                 }
                 islandContainer._lastChargeStatus = statusString;
             }
 
             function onBrightnessChanged(val) {
                 islandContainer._pendingBlVal = val;
+                islandContainer.currentBrightness = val;
                 blDebounce.restart();
             }
 
             function onCapsLockChanged(isOn) {
-                islandContainer.triggerSplitEvent(isOn ? "" : "", true, -1.0, isOn ? "Caps Lock ON" : "Caps Lock OFF", 1);
+                islandContainer.triggerSplitEvent(
+                    isOn ? userConfig.statusIcons["capsLockOn"] : userConfig.statusIcons["capsLockOff"],
+                    true,
+                    -1.0,
+                    isOn ? "Caps Lock ON" : "Caps Lock OFF",
+                    1
+                );
             }
 
             function onBluetoothChanged(isConnected) {
                 islandContainer.btJustConnected = true; 
                 btBlockVolTimer.restart();
-                islandContainer.triggerSplitEvent("󰋋", true, -1.0, isConnected ? "Connected" : "Disconnected", 1);
+                islandContainer.triggerSplitEvent(
+                    userConfig.statusIcons["bluetooth"],
+                    true,
+                    -1.0,
+                    isConnected ? "Connected" : "Disconnected",
+                    1
+                );
             }
         }
 
@@ -248,33 +284,11 @@ PanelWindow {
         }
 
         onCurrentTrackChanged: {
-            if (currentTrack !== "" && islandState !== "expanded") { islandState = "expanded"; autoHideTimer.restart(); }
-        }
-
-        // --- UI 渲染：保留旧分离气泡节点，但不再显示 ---
-        Rectangle {
-            id: splitBubble
-            height: 32; width: 32; radius: 16; color: "black"; y: 8; z: -1
-            property real targetX: islandContainer.islandState === "split" ? (islandContainer.width / 2) + 92 : (islandContainer.width / 2) - 16
-            x: targetX
-            Behavior on x { NumberAnimation { duration: 400; easing.type: Easing.OutQuint } }
-
-            readonly property bool isSplit: false
-            opacity: isSplit ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: splitBubble.isSplit ? 300 : 250; easing.type: Easing.InOutQuad } }
-
-            SequentialAnimation {
-                id: shakeAnim
-                NumberAnimation { target: splitBubble; property: "rotation"; from: 0;   to: -25; duration: 60; easing.type: Easing.OutQuad }
-                NumberAnimation { target: splitBubble; property: "rotation"; from: -25; to:  20; duration: 80; easing.type: Easing.InOutQuad }
-                NumberAnimation { target: splitBubble; property: "rotation"; from:  20; to: -10; duration: 80; easing.type: Easing.InOutQuad }
-                NumberAnimation { target: splitBubble; property: "rotation"; from: -10; to:   0; duration: 60; easing.type: Easing.OutQuad }
-            }
-            
-            Text {
-                id: splitIconText
-                anchors.centerIn: parent; text: islandContainer.splitIcon; color: "white"
-                font.pixelSize: 18; font.family: "JetBrainsMono Nerd Font"
+            if (currentTrack !== ""
+                    && islandState !== "expanded"
+                    && islandState !== "control_center") {
+                islandState = "expanded";
+                autoHideTimer.restart();
             }
         }
 
@@ -427,8 +441,6 @@ PanelWindow {
                 currentArtUrl: islandContainer.currentArtUrl
                 currentTrack: islandContainer.currentTrack
                 currentArtist: islandContainer.currentArtist
-                isCharging: islandContainer.isCharging
-                batteryCapacity: islandContainer.batteryCapacity
                 timePlayed: islandContainer.timePlayed
                 timeTotal: islandContainer.timeTotal
                 trackProgress: islandContainer.trackProgress
@@ -440,6 +452,18 @@ PanelWindow {
 
             ControlCenterLayer {
                 iconFontFamily: root.iconFontFamily
+                textFontFamily: root.textFontFamily
+                heroFontFamily: root.heroFontFamily
+                currentTime: timeObj.currentTime
+                currentDateLabel: timeObj.currentDateLabel
+                batteryCapacity: islandContainer.batteryCapacity
+                isCharging: islandContainer.isCharging
+                volumeLevel: islandContainer.currentVolume
+                brightnessLevel: islandContainer.currentBrightness
+                currentWorkspace: islandContainer.currentWs
+                workspaceIcon: islandContainer.getWorkspaceIcon(islandContainer.currentWs)
+                currentTrack: islandContainer.currentTrack
+                currentArtist: islandContainer.currentArtist
                 showCondition: islandContainer.islandState === "control_center"
             }
 
@@ -450,7 +474,7 @@ PanelWindow {
             State { name: "split";         when: islandContainer.islandState === "split";          PropertyChanges { target: mainCapsule; width: islandContainer.splitCapsuleWidth; height: 38; radius: 19 } },
             State { name: "long_capsule"; when: islandContainer.islandState === "long_capsule";   PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
             State { name: "date_time";    when: islandContainer.islandState === "date_time";      PropertyChanges { target: mainCapsule; width: 220; height: 38; radius: 19 } },
-            State {name: "control_center";when: islandContainer.islandState === "control_center"; PropertyChanges { target: mainCapsule; width: 300; height: 38; radius: 19 } },
+            State { name: "control_center"; when: islandContainer.islandState === "control_center"; PropertyChanges { target: mainCapsule; width: 420; height: 292; radius: 34 } },
             State { name: "expanded";      when: islandContainer.islandState === "expanded";       PropertyChanges { target: mainCapsule; width: 400; height: 165; radius: 40 } }
         ]
     }

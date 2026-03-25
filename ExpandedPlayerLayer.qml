@@ -6,14 +6,27 @@ Item {
     property string currentArtUrl: ""
     property string currentTrack: ""
     property string currentArtist: ""
-    property bool isCharging: false
-    property int batteryCapacity: 0
     property string timePlayed: "0:00"
     property string timeTotal: "0:00"
     property real trackProgress: 0
     property var activePlayer: null
     property string iconFontFamily: "JetBrainsMono Nerd Font"
     property string textFontFamily: "Inter"
+    property real visualizerPhase: 0
+
+    readonly property bool isPlaying: activePlayer && activePlayer.playbackState === MprisPlaybackState.Playing
+
+    function visualizerLevel(index) {
+        const phase = visualizerPhase + index * 0.78;
+        const primary = (Math.sin(phase) + 1) * 0.5;
+        const secondary = (Math.sin(phase * 2 + index * 0.95) + 1) * 0.5;
+        return 0.22 + primary * 0.42 + secondary * 0.24;
+    }
+
+    function pausedVisualizerLevel(index) {
+        const levels = [0.34, 0.58, 0.82, 0.58, 0.34];
+        return levels[index] || 0.4;
+    }
 
     anchors.fill: parent
     anchors.margins: 20
@@ -23,6 +36,16 @@ Item {
         NumberAnimation {
             duration: showCondition ? 300 : 100
             easing.type: Easing.InOutQuad
+        }
+    }
+
+    Timer {
+        interval: 32
+        repeat: true
+        running: showCondition && isPlaying
+        onTriggered: {
+            visualizerPhase += 0.18;
+            if (visualizerPhase > Math.PI * 2) visualizerPhase -= Math.PI * 2;
         }
     }
 
@@ -82,72 +105,43 @@ Item {
                 }
             }
 
-            Row {
+            Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 8
+                width: 44
+                height: 22
 
-                Text {
-                    text: ""
-                    color: "#ffffff"
-                    font.pixelSize: 14
-                    font.family: iconFontFamily
-                    visible: isCharging
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+                Row {
+                    anchors.centerIn: parent
+                    height: parent.height
+                    spacing: 4
 
-                Text {
-                    text: batteryCapacity + "%"
-                    color: "white"
-                    font.pixelSize: 14
-                    font.family: textFontFamily
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: -0.1
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+                    Repeater {
+                        model: 5
 
-                Item {
-                    width: 28
-                    height: 14
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.rightMargin: 2
-                        radius: 4
-                        color: "transparent"
-                        border.color: "#8e8e93"
-                        border.width: 1
-
-                        Rectangle {
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            anchors.margins: 2
+                        delegate: Rectangle {
+                            width: 4
+                            height: isPlaying
+                                ? 6 + (parent.height - 6) * visualizerLevel(index)
+                                : 6 + (parent.height - 6) * pausedVisualizerLevel(index)
                             radius: 2
-                            width: (parent.width - 4) * (batteryCapacity / 100.0)
-                            color: {
-                                if (batteryCapacity <= 10) return "#ff3b30";
-                                if (batteryCapacity <= 20) return "#ffcc00";
-                                return "#34c759";
+                            color: isPlaying ? "#b56cff" : "#5f4b72"
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Behavior on height {
+                                NumberAnimation {
+                                    duration: isPlaying ? 120 : 260
+                                    easing.type: Easing.InOutQuad
+                                }
                             }
 
-                            Behavior on width {
-                                NumberAnimation {
-                                    duration: 300
-                                    easing.type: Easing.OutCubic
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: isPlaying ? 140 : 280
+                                    easing.type: Easing.InOutQuad
                                 }
                             }
                         }
-                    }
-
-                    Rectangle {
-                        width: 2
-                        height: 6
-                        radius: 1
-                        color: "#8e8e93"
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }
