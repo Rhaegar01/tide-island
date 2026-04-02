@@ -123,6 +123,7 @@ QML2_IMPORT_PATH=~/.config/quickshell quickshell -p ~/.config/quickshell/dynamic
 
 - [@end-4](https://github.com/end-4) - For the workspace overview design.
 - [@BEST8OY](https://github.com/BEST8OY) - For providing the lyrics support.
+- 淮南牛肉粉丝 - For being so delicious.
 
 ## Important thing
 
