@@ -3,7 +3,9 @@
 
 - Based on Quickshell and C++ /Qt 6.
 
-- Pursuting lightweight, smooth anim, and low-latency performance. 
+- Pursuting lightweight, smooth anim, and low-latency performance.
+
+- **⚠️ Please read this, it's not that long**
 ### usage
 
 Memory usage: < 200 Mb (PSS)
@@ -182,3 +184,5 @@ bind = SUPER, TAB, exec, qs ipc -p ~/.config/quickshell/dynamic_island/shell.qml
 - **The status of caps lock is currently polled via hyprctl devices. Ensure hyprctl is in your $PATH.**
 
 - **If you encounter any issues, feel free to open an issue!**
+
+-  **Please write your password in UserConfig.qml line 16, to make sure tlp switcher works normally**
