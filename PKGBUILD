@@ -30,7 +30,7 @@ optdepends=(
 )
 provides=('tide-island')
 conflicts=('tide-island')
-source=("$_pkgname::git+file://$PWD")
+source=("$_pkgname::git+https://github.com/sai21-learn/Tide-island.git")
 sha256sums=('SKIP')
 
 pkgver() {
