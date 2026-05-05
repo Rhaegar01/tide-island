@@ -32,16 +32,16 @@ provides=('tide-island')
 conflicts=('tide-island')
 install='tide-island.install'
 # We'll use the local files directly during the build function
-source=()
-sha256sums=()
+source=("$_pkgname::git+https://github.com/sai21-learn/Tide-island.git")
+sha256sums=('SKIP')
 
 pkgver() {
-  cd "${startdir}"
+  cd "$_pkgname"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
-  cmake -B build -S "${startdir}" \
+  cmake -S "$_pkgname" -B build \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release
   cmake --build build
