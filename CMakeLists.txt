@@ -18,12 +18,12 @@ qt_add_qml_module(IslandBackend
     SOURCES
         SysBackend.h
         SysBackend.cpp
-        ConnectivityBackend/BluetoothPairingAgent.h
-        ConnectivityBackend/BluetoothPairingAgent.cpp
-        ConnectivityBackend/WifiController.h
-        ConnectivityBackend/WifiController.cpp
-        ConnectivityBackend/WifiNetworkModel.h
-        ConnectivityBackend/WifiNetworkModel.cpp
+        BluetoothPairingAgent.h
+        BluetoothPairingAgent.cpp
+        WifiController.h
+        WifiController.cpp
+        WifiNetworkModel.h
+        WifiNetworkModel.cpp
 )
 
 target_link_libraries(IslandBackend PRIVATE

@@ -31,7 +31,8 @@ optdepends=(
 provides=('tide-island')
 conflicts=('tide-island')
 install='tide-island.install'
-source=("$_pkgname::git+file://$PWD")
+# We'll use the local files directly during the build function
+source=()
 sha256sums=('SKIP')
 
 pkgver() {
@@ -40,7 +41,7 @@ pkgver() {
 }
 
 build() {
-  cmake -S "$_pkgname" -B build \
+  cmake -B build -S "${startdir}" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release
   cmake --build build
@@ -48,4 +49,6 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
+  chmod +x "$pkgdir/usr/bin/tide-island"
+  chmod +x "$pkgdir/usr/share/tide-island/bin/lyricsmpris"
 }
