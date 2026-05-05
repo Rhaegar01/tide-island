@@ -1,7 +1,7 @@
 # Maintainer: whysooraj <whysooraj.official@gmail.com>
 pkgname=tide-island-git
 _pkgname=Tide-island
-pkgver=r205.f430f91
+pkgver=r207.30860c9
 pkgrel=1
 pkgdesc="A dynamic island for Hyprland using Quickshell"
 arch=('x86_64')
@@ -32,16 +32,16 @@ provides=('tide-island')
 conflicts=('tide-island')
 install='tide-island.install'
 # We'll use the local files directly during the build function
-source=("$_pkgname::file://${startdir}")
+source=("$_pkgname::git+https://github.com/sai21-learn/Tide-island.git")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd "$srcdir/$_pkgname"
+  cd "$_pkgname"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
-  cmake -S "$srcdir/$_pkgname" -B build \
+  cmake -S "$_pkgname" -B build \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release
   cmake --build build

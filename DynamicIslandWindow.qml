@@ -2065,7 +2065,6 @@ PanelWindow {
 
             WheelHandler {
                 id: trackpadSwipeHandler
-                z: 100 // Ensure it's on top of other mouse areas
                 
                 property real accumulatedDelta: 0
                 property real swipeStartProgress: 0
