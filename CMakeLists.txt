@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Qml Network DBus)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Network DBus)
 find_library(UDEV_LIB NAMES udev REQUIRED)
 
 # Main Backend Module (Combining all C++ components)
@@ -28,6 +28,7 @@ qt_add_qml_module(IslandBackend
 
 target_link_libraries(IslandBackend PRIVATE
     Qt6::Core
+    Qt6::Gui
     Qt6::Qml
     Qt6::Network
     Qt6::DBus

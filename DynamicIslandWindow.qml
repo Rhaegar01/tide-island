@@ -2057,9 +2057,72 @@ PanelWindow {
                             islandContainer.swipeTransitionProgress = settleResult.progress;
                         }
                     } else {
-                        islandContainer.swipeTransitionProgress = swipeStartProgress;
+                        islandContainer.swipeTransitionProgress = islandContainer.sideSwipeRestProgressForProgress(swipeStartProgress);
                     }
                     swipeMoved = false;
+                }
+            }
+
+            WheelHandler {
+                id: trackpadSwipeHandler
+                z: 100 // Ensure it's on top of other mouse areas
+                
+                property real accumulatedDelta: 0
+                property real swipeStartProgress: 0
+
+                onActiveChanged: {
+                    if (active) {
+                        swipeStartProgress = islandContainer.swipeTransitionProgress;
+                        accumulatedDelta = 0;
+                        islandContainer.cancelSideSwipeSettle();
+                    } else {
+                        const settleResult = islandContainer.resolveSideSwipeSettle(
+                            swipeStartProgress,
+                            islandContainer.swipeTransitionProgress
+                        );
+
+                        islandContainer.beginSideSwipeSettle(settleResult.width);
+
+                        switch (settleResult.action) {
+                        case "time":
+                            islandContainer.showTimeCapsule();
+                            break;
+                        case "custom":
+                            islandContainer.showCustomCapsule();
+                            break;
+                        case "lyrics":
+                            islandContainer.showLyricsCapsule();
+                            break;
+                        default:
+                            islandContainer.swipeTransitionProgress = settleResult.progress;
+                        }
+                    }
+                }
+
+                onWheel: (event) => {
+                    // [Wheel Debug] Let's see what's coming in
+                    const dx = event.pixelDelta.x !== 0 ? event.pixelDelta.x : event.angleDelta.x / 4;
+                    const dy = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.angleDelta.y / 4;
+                    
+                    console.debug("[Wheel Debug] dx:", dx, "dy:", dy, "accumulated:", accumulatedDelta);
+
+                    // If the user is swiping horizontally, use that. 
+                    // Fallback to vertical if it's the dominant movement
+                    const effectiveDx = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+                    
+                    const sensitivity = 3.0; // Even higher sensitivity for testing
+                    accumulatedDelta += effectiveDx * sensitivity;
+                    
+                    const logicalDeltaX = -accumulatedDelta;
+                    
+                    const nextProgress = islandContainer.advanceSideSwipeProgress(
+                        swipeStartProgress,
+                        logicalDeltaX
+                    );
+
+                    islandContainer.swipeTransitionProgress = nextProgress;
+                    mainCapsule.displayedWidth = mainCapsule.sideSwipePreviewWidth;
+                    event.accepted = true;
                 }
             }
 
