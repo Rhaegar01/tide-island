@@ -632,10 +632,10 @@ PanelWindow {
             if (userConfig.overviewCloseKey && event.key === userConfig.overviewCloseKey) {
                 root.closeOverviewEverywhere();
                 event.accepted = true;
-            } else if (userConfig.overviewPreviousWorkspaceKey && event.key === userConfig.overviewPreviousWorkspaceKey) {
+            } else if ((userConfig.overviewPreviousWorkspaceKey && event.key === userConfig.overviewPreviousWorkspaceKey) || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {
                 Hyprland.dispatch("workspace r-1");
                 event.accepted = true;
-            } else if (userConfig.overviewNextWorkspaceKey && event.key === userConfig.overviewNextWorkspaceKey) {
+            } else if ((userConfig.overviewNextWorkspaceKey && event.key === userConfig.overviewNextWorkspaceKey) || event.key === Qt.Key_Tab) {
                 Hyprland.dispatch("workspace r+1");
                 event.accepted = true;
             }
