@@ -1,10 +1,14 @@
 #!/bin/bash
 # Launcher for Tide Island Quickshell component
 
-# Standard path for system installation
-QML_PATH="/usr/share/tide-island/shell.qml"
+# Standard path for system installation. Use the config directory rather than
+# shell.qml so Hyprland's `qs ipc -p /usr/share/tide-island ...` targets the
+# same Quickshell instance.
+QML_PATH="/usr/share/tide-island"
+SETUP_HELPER="$QML_PATH/bin/tide-island-setup"
 
-# If user has a local version, prefer it?
-# Actually, for a system package, we should just run the system version.
+if [[ -x "$SETUP_HELPER" && -z "${TIDE_ISLAND_SKIP_SETUP:-}" ]]; then
+  "$SETUP_HELPER" --launch >/dev/null 2>&1 || true
+fi
 
 exec quickshell -p "$QML_PATH" "$@"
