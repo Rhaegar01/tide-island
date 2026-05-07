@@ -113,7 +113,7 @@ The easiest way to install Tide Island is via the AUR or by building the provide
 
 **Using an AUR Helper:**
 ```bash
-yay -S tide-island-git
+yay -S tide-island
 ```
 
 **Manual Installation:**
