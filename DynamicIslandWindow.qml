@@ -822,6 +822,7 @@ PanelWindow {
                     id: itemId,
                     kind: "battery",
                     level: Math.max(0, Math.min(100, batteryCapacity)),
+                    isCharging: isCharging,
                     icon: "",
                     text: Math.max(0, batteryCapacity) + "%"
                 };
@@ -888,6 +889,7 @@ PanelWindow {
                     + "\u001f" + String(item.icon || "")
                     + "\u001f" + String(item.text || "")
                     + "\u001f" + String(item.level === undefined ? "" : item.level)
+                    + "\u001f" + String(item.isCharging === undefined ? "" : item.isCharging)
                     + "\u001e";
             }
 

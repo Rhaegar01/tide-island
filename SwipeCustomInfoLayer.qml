@@ -96,7 +96,8 @@ Item {
                 readonly property bool hasLeadingVisual: hasIcon || isBattery
                 implicitWidth: isCava
                     ? cavaBars.implicitWidth
-                    : leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
+                    : (isBattery && modelData.isCharging ? (chargingIcon.implicitWidth + 4) : 0)
+                      + leadingVisual.width + (hasLeadingVisual ? root.iconSpacing : 0) + valueText.implicitWidth
                 implicitHeight: root.height
                 width: implicitWidth
                 height: implicitHeight
@@ -106,6 +107,17 @@ Item {
                     visible: parent.isCava
                     anchors.centerIn: parent
                     levels: root.cavaLevels
+                }
+
+                Text {
+                    id: chargingIcon
+                    visible: parent.isBattery && modelData.isCharging
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: userConfig.statusIcons["charging"]
+                    color: "white"
+                    font.pixelSize: root.iconPixelSize - 1
+                    font.family: root.iconFontFamily
                 }
 
                 Item {
@@ -178,8 +190,12 @@ Item {
                 Text {
                     visible: !parent.isCava
                     id: valueText
-                    anchors.left: parent.isBattery ? parent.left : leadingVisual.right
-                    anchors.leftMargin: parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0
+                    anchors.left: parent.isBattery 
+                        ? (chargingIcon.visible ? chargingIcon.right : parent.left)
+                        : leadingVisual.right
+                    anchors.leftMargin: (parent.isBattery && chargingIcon.visible) 
+                        ? 4 
+                        : (parent.hasLeadingVisual && !parent.isBattery ? root.iconSpacing : 0)
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text || ""
                     color: "white"
