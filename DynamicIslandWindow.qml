@@ -42,6 +42,10 @@ PanelWindow {
         id: userConfig
     }
 
+    HyprlandDispatch {
+        id: hyprDispatch
+    }
+
     color: "transparent"
     anchors { top: true; left: true; right: true }
     mask: Region {
@@ -644,10 +648,10 @@ PanelWindow {
                 root.closeOverviewEverywhere();
                 event.accepted = true;
             } else if ((userConfig.overviewPreviousWorkspaceKey && event.key === userConfig.overviewPreviousWorkspaceKey) || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier)) || event.key === Qt.Key_Backtab) {
-                Hyprland.dispatch("workspace r-1");
+                hyprDispatch.focusWorkspace("r-1");
                 event.accepted = true;
             } else if ((userConfig.overviewNextWorkspaceKey && event.key === userConfig.overviewNextWorkspaceKey) || event.key === Qt.Key_Tab) {
-                Hyprland.dispatch("workspace r+1");
+                hyprDispatch.focusWorkspace("r+1");
                 event.accepted = true;
             }
         }

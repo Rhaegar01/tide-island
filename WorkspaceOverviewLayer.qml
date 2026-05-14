@@ -13,6 +13,10 @@ Item {
         id: userConfig
     }
 
+    HyprlandDispatch {
+        id: hyprDispatch
+    }
+
     required property var screen
     required property var hyprlandData
 
@@ -134,6 +138,56 @@ Item {
             return -1;
 
         return workspaceGroup * workspacesShown + getWsInCell(rowIndex, columnIndex);
+    }
+
+    function clampNumber(value, minimum, maximum) {
+        const parsed = Number(value);
+        if (!isFinite(parsed))
+            return minimum;
+
+        return Math.max(minimum, Math.min(maximum, parsed));
+    }
+
+    function transformedMonitorWidth(monitorData) {
+        if (!monitorData)
+            return monitor ? monitor.width : (screen ? screen.width : 1920);
+
+        return (monitorData.transform & 1) ? monitorData.height : monitorData.width;
+    }
+
+    function transformedMonitorHeight(monitorData) {
+        if (!monitorData)
+            return monitor ? monitor.height : (screen ? screen.height : 1080);
+
+        return (monitorData.transform & 1) ? monitorData.width : monitorData.height;
+    }
+
+    function floatingWindowPosition(windowTile) {
+        const sourceMonitor = windowTile && windowTile.sourceMonitorData
+            ? windowTile.sourceMonitorData
+            : monitorData;
+        const reserved = sourceMonitor && sourceMonitor.reserved
+            ? sourceMonitor.reserved
+            : [0, 0, 0, 0];
+        const monitorX = sourceMonitor && sourceMonitor.x !== undefined ? sourceMonitor.x : 0;
+        const monitorY = sourceMonitor && sourceMonitor.y !== undefined ? sourceMonitor.y : 0;
+        const usableX = monitorX + reserved[0];
+        const usableY = monitorY + reserved[1];
+        const usableWidth = Math.max(1, transformedMonitorWidth(sourceMonitor) - reserved[0] - reserved[2]);
+        const usableHeight = Math.max(1, transformedMonitorHeight(sourceMonitor) - reserved[1] - reserved[3]);
+        const scaleX = Math.max(0.0001, windowTile.scale * windowTile.widthRatio);
+        const scaleY = Math.max(0.0001, windowTile.scale * windowTile.heightRatio);
+        const localX = (windowTile.x - windowTile.workspaceOffsetX) / scaleX;
+        const localY = (windowTile.y - windowTile.workspaceOffsetY) / scaleY;
+        const windowWidth = windowTile.windowData && windowTile.windowData.size ? windowTile.windowData.size[0] : 0;
+        const windowHeight = windowTile.windowData && windowTile.windowData.size ? windowTile.windowData.size[1] : 0;
+        const maxX = usableX + Math.max(0, usableWidth - windowWidth);
+        const maxY = usableY + Math.max(0, usableHeight - windowHeight);
+
+        return {
+            "x": Math.round(clampNumber(usableX + localX, usableX, maxX)),
+            "y": Math.round(clampNumber(usableY + localY, usableY, maxY))
+        };
     }
 
     function normalizeToplevelAddress(toplevel) {
@@ -348,7 +402,7 @@ Item {
                                             return;
 
                                         root.closeRequested();
-                                        Hyprland.dispatch("workspace " + workspaceCell.workspaceValue);
+                                        hyprDispatch.focusWorkspace(workspaceCell.workspaceValue);
                                     }
                                 }
                             }
@@ -490,12 +544,11 @@ Item {
                                         && windowTile.windowData
                                         && windowTile.windowData.workspace
                                         && targetWorkspace !== windowTile.windowData.workspace.id) {
-                                    Hyprland.dispatch("movetoworkspacesilent " + targetWorkspace + ", address:" + windowTile.windowData.address);
+                                    hyprDispatch.moveWindowToWorkspace(windowTile.address, targetWorkspace, false);
                                     restoreTilePosition.restart();
-                                } else if (windowTile.windowData && windowTile.windowData.floating) {
-                                    const percentageX = Math.round((windowTile.x - windowTile.workspaceOffsetX) / root.workspaceImplicitWidth * 100);
-                                    const percentageY = Math.round((windowTile.y - windowTile.workspaceOffsetY) / root.workspaceImplicitHeight * 100);
-                                    Hyprland.dispatch("movewindowpixel exact " + percentageX + "% " + percentageY + "%, address:" + windowTile.windowData.address);
+                                } else if (movedWindow && windowTile.windowData && windowTile.windowData.floating) {
+                                    const position = root.floatingWindowPosition(windowTile);
+                                    hyprDispatch.moveWindowToPosition(windowTile.address, position.x, position.y, false);
                                 } else {
                                     restoreTilePosition.restart();
                                 }
@@ -518,10 +571,10 @@ Item {
 
                                 if (mouse.button === userConfig.mouseButton(userConfig.workspaceOverviewWindowFocusButton)) {
                                     root.closeRequested();
-                                    Hyprland.dispatch("focuswindow address:" + windowTile.windowData.address);
+                                    hyprDispatch.focusWindow(windowTile.address);
                                     mouse.accepted = true;
                                 } else if (mouse.button === userConfig.mouseButton(userConfig.workspaceOverviewWindowCloseButton)) {
-                                    Hyprland.dispatch("closewindow address:" + windowTile.windowData.address);
+                                    hyprDispatch.closeWindow(windowTile.address);
                                     mouse.accepted = true;
                                 }
                             }
