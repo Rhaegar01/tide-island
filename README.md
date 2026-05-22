@@ -137,16 +137,11 @@ The custom page can display:
 
 ## Performance
 
-Current target usage:
+**Memory**: <300 Mb
 
-| Metric    | Target                      |
-| --------- | --------------------------- |
-| Memory    | < 200 MB PSS                |
-| CPU       | < 2% during normal use      |
-| Rendering | Event-driven where possible |
-| Desktop   | Hyprland                    |
+**CPU usage**: < 1 during normal use
 
-Performance may vary depending on enabled modules, lyrics providers, animations, and system configuration.
+> Performance may vary depending on enabled modules, lyrics providers, animations, and system configuration.
 
 <br>
 
