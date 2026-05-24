@@ -1,15 +1,13 @@
 import QtQuick
+import IslandBackend
 import Quickshell.Services.Mpris
-import "../common"
 
 Item {
     id: root
 
     signal controlPressed()
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     property bool showCondition: false
     property string currentArtUrl: ""

@@ -551,7 +551,7 @@ void LyricsMprisApp::startLrcx() {
     advanced.addQueryItem(QStringLiteral("artist"), query.artist);
     if (!query.album.isEmpty()) advanced.addQueryItem(QStringLiteral("album"), query.album);
     if (query.durationMs > 0) advanced.addQueryItem(QStringLiteral("duration"), QString::number(qMax(1, query.durationMs / 1000)));
-    get(withQuery(QStringLiteral("https://api.lrc.cx/api/v1/lyrics/advance"), advanced), QStringLiteral("lrcx"), QStringLiteral("lrcx-json"));
+    get(withQuery(QStringLiteral("https://api.lrc.cx/jsonapi"), advanced), QStringLiteral("lrcx"), QStringLiteral("lrcx-json"));
 
     QUrlQuery legacy;
     legacy.addQueryItem(QStringLiteral("title"), query.title);

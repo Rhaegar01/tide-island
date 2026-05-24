@@ -52,6 +52,24 @@ target_link_libraries(lyricsmpris_tests PRIVATE
 
 add_test(NAME lyricsmpris_core COMMAND lyricsmpris_tests)
 
+add_executable(user_config_backend_tests
+    tests/user_config_backend_tests.cpp
+    backend/UserConfigBackend.h
+    backend/UserConfigBackend.cpp
+)
+
+target_include_directories(user_config_backend_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/backend
+)
+
+target_link_libraries(user_config_backend_tests PRIVATE
+    Qt6::Core
+    Qt6::Qml
+    Qt6::Test
+)
+
+add_test(NAME user_config_backend COMMAND user_config_backend_tests)
+
 # Main Backend Module (Combining all C++ components)
 qt_add_qml_module(IslandBackend
     URI IslandBackend
@@ -61,6 +79,8 @@ qt_add_qml_module(IslandBackend
         backend/SysBackend.cpp
         backend/SystemServices.h
         backend/SystemServices.cpp
+        backend/UserConfigBackend.h
+        backend/UserConfigBackend.cpp
         backend/BluetoothPairingAgent.h
         backend/BluetoothPairingAgent.cpp
         backend/WifiController.h

@@ -1,12 +1,10 @@
 import QtQuick
-import "../common"
+import IslandBackend
 
 Item {
     id: root
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     property string currentTime: "00:00"
     property var configSource: null

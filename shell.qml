@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import IslandBackend
-import "qml/common"
 
 Scope {
     id: shellRoot
@@ -11,9 +10,7 @@ Scope {
     readonly property bool screenRecordingActive: SystemServices.screenRecordingActive
     property bool shuttingDown: false
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     function forEachWindow(callback) {
         const windows = panelVariants.instances ? panelVariants.instances : [];

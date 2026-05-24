@@ -39,9 +39,7 @@ PanelWindow {
         ? !!shellRootController.screenRecordingActive
         : false
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     HyprlandDispatch {
         id: hyprDispatch

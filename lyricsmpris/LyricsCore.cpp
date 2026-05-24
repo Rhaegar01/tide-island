@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QJsonValue>
 #include <QRegularExpression>
+#include <QXmlStreamReader>
 #include <algorithm>
 
 namespace lyricsmpris {
@@ -35,6 +36,17 @@ int intValue(const QJsonObject &object, const QString &key) {
     if (value.isDouble()) return value.toInt();
     if (value.isString()) return value.toString().toInt();
     return 0;
+}
+
+double doubleValue(const QJsonObject &object, const QString &key) {
+    const QJsonValue value = object.value(key);
+    if (value.isDouble()) return value.toDouble();
+    if (value.isString()) {
+        bool ok = false;
+        const double number = value.toString().toDouble(&ok);
+        return ok ? number : 0.0;
+    }
+    return 0.0;
 }
 
 QString artistsFromArray(const QJsonArray &array) {
@@ -232,6 +244,56 @@ QString reasonWithScore(const QString &reason, int score) {
     return reason + QStringLiteral(":") + QString::number(score);
 }
 
+qint64 ttmlTimeToMs(QString value) {
+    value = value.trimmed();
+    if (value.isEmpty()) return -1;
+
+    const QStringList parts = value.split(QLatin1Char(':'));
+    bool ok = false;
+    double totalSeconds = 0.0;
+    if (parts.size() == 3) {
+        totalSeconds += parts.at(0).toDouble(&ok) * 3600.0;
+        if (!ok) return -1;
+        totalSeconds += parts.at(1).toDouble(&ok) * 60.0;
+        if (!ok) return -1;
+        totalSeconds += parts.at(2).toDouble(&ok);
+    } else if (parts.size() == 2) {
+        totalSeconds += parts.at(0).toDouble(&ok) * 60.0;
+        if (!ok) return -1;
+        totalSeconds += parts.at(1).toDouble(&ok);
+    } else {
+        totalSeconds += value.toDouble(&ok);
+    }
+
+    return ok && totalSeconds >= 0.0 ? qRound64(totalSeconds * 1000.0) : -1;
+}
+
+QString lrcTimestamp(qint64 timeMs) {
+    const qint64 totalSeconds = timeMs / 1000;
+    return QStringLiteral("[%1:%2.%3]")
+        .arg(totalSeconds / 60, 2, 10, QLatin1Char('0'))
+        .arg(totalSeconds % 60, 2, 10, QLatin1Char('0'))
+        .arg(timeMs % 1000, 3, 10, QLatin1Char('0'));
+}
+
+QString lrcFromTtml(const QString &ttml) {
+    if (ttml.trimmed().isEmpty()) return QString();
+
+    QStringList lines;
+    QXmlStreamReader reader(ttml);
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (!reader.isStartElement() || reader.name() != QLatin1String("p")) continue;
+
+        const qint64 timeMs = ttmlTimeToMs(reader.attributes().value(QStringLiteral("begin")).toString());
+        const QString text = cleanLyricText(reader.readElementText(QXmlStreamReader::IncludeChildElements));
+        if (timeMs >= 0 && !text.isEmpty())
+            lines.append(lrcTimestamp(timeMs) + text);
+    }
+
+    return lines.join(QLatin1Char('\n'));
+}
+
 QList<ProviderCandidate> parseLrclibObject(const QJsonObject &object) {
     ProviderCandidate candidate;
     candidate.provider = QStringLiteral("lrclib");
@@ -273,14 +335,18 @@ QList<ProviderCandidate> parseLrcxObject(const QJsonObject &object) {
         stringValue(object, QStringLiteral("album")),
         stringValue(object, QStringLiteral("albumName"))
     });
-    const int duration = intValue(object, QStringLiteral("duration"));
-    candidate.durationMs = duration > 0 && duration < 10000 ? duration * 1000 : duration;
+    const double duration = doubleValue(object, QStringLiteral("duration"));
+    candidate.durationMs = duration > 0.0 && duration < 10000.0
+        ? int(duration * 1000.0 + 0.5)
+        : int(duration + 0.5);
     candidate.syncedLyrics = firstNonEmpty({
         stringValue(object, QStringLiteral("lyrics")),
         stringValue(object, QStringLiteral("lyric")),
         stringValue(object, QStringLiteral("lrc")),
         stringValue(object, QStringLiteral("syncedLyrics"))
     });
+    if (candidate.syncedLyrics.isEmpty())
+        candidate.syncedLyrics = lrcFromTtml(stringValue(object, QStringLiteral("lrc_ttml")));
     candidate.plainLyrics = stringValue(object, QStringLiteral("plainLyrics"));
     return candidate.syncedLyrics.isEmpty() && candidate.plainLyrics.isEmpty()
         ? QList<ProviderCandidate>()

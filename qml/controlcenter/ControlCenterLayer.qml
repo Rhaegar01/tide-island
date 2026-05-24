@@ -1,16 +1,13 @@
 import QtQuick
 import Quickshell.Bluetooth
 import IslandBackend
-import "../common"
 
 Item {
     id: controlCenter
 
     signal connectivityPanelRequested(string kind, bool open)
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     property bool showCondition: false
     property string iconFontFamily: userConfig.iconFontFamily
@@ -263,7 +260,7 @@ Item {
         if (details.indexOf("sorry, try again") >= 0 || details.indexOf("incorrect password attempt") >= 0)
             return "The configured sudo password did not work.";
         if (details.indexOf("sudo:") >= 0 && details.indexOf("password") >= 0)
-            return "sudo needs a password; set tlpSudoPassword in UserConfig.";
+            return "sudo needs a password; set tlpSudoPassword in userconfig.json.";
         if (details.indexOf("sudo:") >= 0 && details.indexOf("no new privileges") >= 0)
             return "sudo is blocked by the current process security flags.";
         if (details.indexOf("sudo:") >= 0 && details.indexOf("a terminal is required") >= 0)
@@ -278,7 +275,7 @@ Item {
         if (exitCode === 127)
             return "TLP is not installed.";
         if (exitCode === 126)
-            return "Set tlpSudoPassword in UserConfig.";
+            return "Set tlpSudoPassword in userconfig.json.";
         return "TLP could not apply that mode.";
     }
 

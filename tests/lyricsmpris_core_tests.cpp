@@ -20,6 +20,7 @@ private slots:
     void rejectsConflictingLyricMetadata();
     void requiresTrustedOrLyricMetadata();
     void acceptsMusixmatchWithRequestMetadata();
+    void parsesLrcxJsonApiShape();
     void parsesNeteaseSearchShapes();
     void parsesProviderFixtures();
     void releasesDocumentStorage();
@@ -245,6 +246,31 @@ void LyricsMprisCoreTests::acceptsMusixmatchWithRequestMetadata() {
     const CandidateEvaluation evaluation = evaluateCandidate(query, candidate);
     QVERIFY2(evaluation.accepted, qPrintable(evaluation.reason));
     QVERIFY(documentFromCandidate(candidate).hasSyncedLines());
+}
+
+void LyricsMprisCoreTests::parsesLrcxJsonApiShape() {
+    const QByteArray payload = R"([{
+        "title": "Shape of You",
+        "artist": "Ed Sheeran",
+        "album": "Divide",
+        "duration": 233.713,
+        "lrc_ttml": "<tt><body><div><p begin=\"9.731\"><span>The</span> <span>club</span></p></div></body></tt>"
+    }, {
+        "title": "玻璃爱",
+        "artist": "xxxmiracle&豪一鸽",
+        "album": "玻璃爱",
+        "duration": 194.501,
+        "lrc": "[00:00.000]作词 : xxxmiracle/豪一鸽"
+    }])";
+
+    const QList<ProviderCandidate> candidates = parseLrcxJson(payload);
+    QCOMPARE(candidates.size(), 2);
+    QCOMPARE(candidates.first().provider, QString("lrcx"));
+    QCOMPARE(candidates.first().durationMs, 233713);
+    QVERIFY(candidates.first().syncedLyrics.contains(QString("[00:09.731]The club")));
+    QVERIFY(documentFromCandidate(candidates.first()).hasSyncedLines());
+    QCOMPARE(candidates.at(1).durationMs, 194501);
+    QVERIFY(documentFromCandidate(candidates.at(1)).hasSyncedLines());
 }
 
 void LyricsMprisCoreTests::parsesNeteaseSearchShapes() {

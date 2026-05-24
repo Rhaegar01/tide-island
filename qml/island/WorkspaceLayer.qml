@@ -1,12 +1,10 @@
 import QtQuick
-import "../common"
+import IslandBackend
 
 Item {
     id: root
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     property int workspaceId: 1
     property string displayText: "Workspace " + workspaceId

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import IslandBackend
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -10,9 +11,7 @@ import "../common"
 Item {
     id: root
 
-    UserConfig {
-        id: userConfig
-    }
+    readonly property var userConfig: UserConfig
 
     HyprlandDispatch {
         id: hyprDispatch
