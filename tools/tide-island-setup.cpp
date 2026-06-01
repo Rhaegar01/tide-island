@@ -127,6 +127,7 @@ QJsonObject defaultUserConfig()
         {QStringLiteral("dynamicIslandSecondaryButton"), 3},
         {QStringLiteral("dynamicIslandSecondaryAction"), QStringLiteral("toggleControlCenter")},
         {QStringLiteral("dynamicIslandLeftSwipeItems"), stringArray({QStringLiteral("cava"), QStringLiteral("battery")})},
+        {QStringLiteral("disableAutoExpandOnTrackChange"), false},
     };
 }
 

@@ -1023,6 +1023,7 @@ PanelWindow {
         }
 
         onCurrentTrackChanged: {
+            if (userConfig.disableAutoExpandOnTrackChange) return;
             if (currentTrack !== ""
                     && islandState !== "control_center"
                     && islandState !== "notification"

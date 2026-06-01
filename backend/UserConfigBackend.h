@@ -34,6 +34,7 @@ class UserConfigBackend final : public QObject {
     Q_PROPERTY(int dynamicIslandSecondaryButton READ dynamicIslandSecondaryButton NOTIFY dynamicIslandSecondaryButtonChanged FINAL)
     Q_PROPERTY(QString dynamicIslandSecondaryAction READ dynamicIslandSecondaryAction NOTIFY dynamicIslandSecondaryActionChanged FINAL)
     Q_PROPERTY(QVariantList dynamicIslandLeftSwipeItems READ dynamicIslandLeftSwipeItems NOTIFY dynamicIslandLeftSwipeItemsChanged FINAL)
+    Q_PROPERTY(bool disableAutoExpandOnTrackChange READ disableAutoExpandOnTrackChange NOTIFY disableAutoExpandOnTrackChangeChanged FINAL)
 
 public:
     explicit UserConfigBackend(QObject *parent = nullptr);
@@ -57,6 +58,7 @@ public:
     int dynamicIslandSecondaryButton() const;
     QString dynamicIslandSecondaryAction() const;
     const QVariantList &dynamicIslandLeftSwipeItems() const;
+    bool disableAutoExpandOnTrackChange() const;
     void setDefaultWallpaperPath(const QString &path);
     void setDefaultTlpSudoPassword(const QString &password);
 
@@ -83,6 +85,7 @@ signals:
     void dynamicIslandSecondaryButtonChanged();
     void dynamicIslandSecondaryActionChanged();
     void dynamicIslandLeftSwipeItemsChanged();
+    void disableAutoExpandOnTrackChangeChanged();
 
 private:
     void scheduleReload();
@@ -109,6 +112,7 @@ private:
     int m_dynamicIslandSecondaryButton = 3;
     QString m_dynamicIslandSecondaryAction = QStringLiteral("toggleControlCenter");
     QVariantList m_dynamicIslandLeftSwipeItems;
+    bool m_disableAutoExpandOnTrackChange = false;
 
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;

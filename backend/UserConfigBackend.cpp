@@ -41,6 +41,12 @@ QVariantList jsonArray(const QJsonObject &object, QLatin1String key, const QVari
     return value.isArray() ? value.toArray().toVariantList() : fallback;
 }
 
+bool jsonBool(const QJsonObject &object, QLatin1String key, bool fallback)
+{
+    const QJsonValue value = object.value(key);
+    return value.isBool() ? value.toBool() : fallback;
+}
+
 template<typename Owner, typename T, typename Signal>
 void updateField(Owner *owner, T &field, T nextValue, Signal signal)
 {
@@ -162,6 +168,11 @@ const QVariantList &UserConfigBackend::dynamicIslandLeftSwipeItems() const
     return m_dynamicIslandLeftSwipeItems;
 }
 
+bool UserConfigBackend::disableAutoExpandOnTrackChange() const
+{
+    return m_disableAutoExpandOnTrackChange;
+}
+
 void UserConfigBackend::setDefaultWallpaperPath(const QString &path)
 {
     if (m_defaultWallpaperPath == path)
@@ -275,6 +286,7 @@ void UserConfigBackend::loadConfig()
     updateField(this, m_dynamicIslandSecondaryButton, jsonInt(configObject, QLatin1String("dynamicIslandSecondaryButton"), 3), &UserConfigBackend::dynamicIslandSecondaryButtonChanged);
     updateField(this, m_dynamicIslandSecondaryAction, jsonString(configObject, QLatin1String("dynamicIslandSecondaryAction"), QStringLiteral("toggleControlCenter")), &UserConfigBackend::dynamicIslandSecondaryActionChanged);
     updateField(this, m_dynamicIslandLeftSwipeItems, jsonArray(configObject, QLatin1String("dynamicIslandLeftSwipeItems"), defaultDynamicIslandLeftSwipeItems()), &UserConfigBackend::dynamicIslandLeftSwipeItemsChanged);
+    updateField(this, m_disableAutoExpandOnTrackChange, jsonBool(configObject, QLatin1String("disableAutoExpandOnTrackChange"), false), &UserConfigBackend::disableAutoExpandOnTrackChangeChanged);
 
     updateWatchedPaths();
 }
