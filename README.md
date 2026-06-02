@@ -296,7 +296,7 @@ Example:
 
 <br>
 
-### Shortcuts
+## Shortcuts
 
 Not required, you can adjust based on your preferences.
 
