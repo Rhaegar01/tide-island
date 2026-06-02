@@ -62,6 +62,17 @@ Scope {
             shellRoot.openOverviewAll();
     }
 
+    function forFocusedWindow(callback) {
+        const windows = panelVariants.instances ? panelVariants.instances : [];
+        for (let index = 0; index < windows.length; index++) {
+            const window = windows[index];
+            if (window && window.monitorFocused) {
+                callback(window);
+                return;
+            }
+        }
+    }
+
     IpcHandler {
         target: "overview"
 
@@ -82,6 +93,42 @@ Scope {
                 if (window && window.prewarmWallpaperCache)
                     window.prewarmWallpaperCache();
             });
+        }
+    }
+
+    IpcHandler {
+        target: "tide"
+
+        function showClock() {
+            shellRoot.forFocusedWindow((window) => window.showClockWindow());
+        }
+
+        function showCustom() {
+            shellRoot.forFocusedWindow((window) => window.showCustomInfoWindow());
+        }
+
+        function showLyrics() {
+            shellRoot.forFocusedWindow((window) => window.showLyricsWindow());
+        }
+
+        function togglePlayer() {
+            shellRoot.forFocusedWindow((window) => window.togglePlayerWindow());
+        }
+
+        function toggleControlCenter() {
+            shellRoot.forFocusedWindow((window) => window.toggleControlCenterWindow());
+        }
+
+        function playPause() {
+            shellRoot.forFocusedWindow((window) => window.playerPlayPauseWindow());
+        }
+
+        function nextTrack() {
+            shellRoot.forFocusedWindow((window) => window.playerNextWindow());
+        }
+
+        function prevTrack() {
+            shellRoot.forFocusedWindow((window) => window.playerPreviousWindow());
         }
     }
 

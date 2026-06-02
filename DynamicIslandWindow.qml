@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import Quickshell.Services.Mpris
 import IslandBackend
 import "qml/common"
 import "qml/controlcenter"
@@ -271,6 +272,45 @@ PanelWindow {
 
     function showNotification(appName, summary, body) {
         islandContainer.showNotificationCapsule(appName, summary, body);
+    }
+
+    function showClockWindow() { islandContainer.showTimeCapsule(); }
+    function showCustomInfoWindow() { islandContainer.showCustomCapsule(); }
+    function showLyricsWindow() { islandContainer.showLyricsCapsule(); }
+
+    function togglePlayerWindow() {
+        if (islandContainer.islandState === "expanded")
+            islandContainer.smartRestoreState();
+        else
+            islandContainer.showExpandedPlayer(false);
+    }
+
+    function toggleControlCenterWindow() {
+        if (islandContainer.islandState === "control_center")
+            islandContainer.smartRestoreState();
+        else
+            islandContainer.showControlCenter();
+    }
+
+    function playerPlayPauseWindow() {
+        var player = islandContainer.mediaController.activePlayer;
+        if (!player || !player.canControl) return;
+        if (player.canTogglePlaying) { player.togglePlaying(); return; }
+        if (player.playbackState === MprisPlaybackState.Playing) {
+            if (player.canPause) player.pause();
+        } else if (player.canPlay) {
+            player.play();
+        }
+    }
+
+    function playerNextWindow() {
+        var player = islandContainer.mediaController.activePlayer;
+        if (player) player.next();
+    }
+
+    function playerPreviousWindow() {
+        var player = islandContainer.mediaController.activePlayer;
+        if (player) player.previous();
     }
 
     onOverviewVisibleChanged: {
