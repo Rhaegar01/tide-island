@@ -129,6 +129,8 @@ QJsonObject defaultUserConfig()
         {QStringLiteral("dynamicIslandSecondaryAction"), QStringLiteral("toggleControlCenter")},
         {QStringLiteral("dynamicIslandLeftSwipeItems"), stringArray({QStringLiteral("cava"), QStringLiteral("battery")})},
         {QStringLiteral("disableAutoExpandOnTrackChange"), false},
+        {QStringLiteral("enableHoverExpand"), false},
+        {QStringLiteral("hoverExpandAction"), 1},
         {QStringLiteral("islandWidth"), 140},
         {QStringLiteral("islandHeight"), 38},
         {QStringLiteral("islandPositionX"), 50},
@@ -357,8 +359,21 @@ QString formatUserConfig(const QJsonObject &data)
          "    //  OTHER\n"
          "    // ===========================================================================\n"
          "\n"
-         "    // When true, the capsule stays collapsed when a new track starts playing.\n"
-         "    \"disableAutoExpandOnTrackChange\": " << (boolean("disableAutoExpandOnTrackChange", false) ? "true" : "false") << "\n"
+          "    // When true, the capsule stays collapsed when a new track starts playing.\n"
+          "    \"disableAutoExpandOnTrackChange\": " << (boolean("disableAutoExpandOnTrackChange", false) ? "true" : "false") << ",\n"
+          "\n"
+          "\n"
+          "    // ===========================================================================\n"
+          "    //  INTERACTION - Hover\n"
+          "    // ===========================================================================\n"
+          "\n"
+          "    // When true, hovering over the island capsule will automatically expand it.\n"
+          "    \"enableHoverExpand\": " << (boolean("enableHoverExpand", false) ? "true" : "false") << ",\n"
+          "\n"
+          "    // What to expand when hovering.\n"
+          "    //  1 = Music Player (expanded player view)\n"
+          "    //  2 = Control Center\n"
+          "    \"hoverExpandAction\": " << num("hoverExpandAction", 1) << "\n"
          "}\n";
 
     return result;

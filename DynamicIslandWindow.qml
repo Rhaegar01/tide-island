@@ -408,6 +408,7 @@ PanelWindow {
         property real customCapsuleWidth: 220
         property real lyricsCapsuleWidth: 220
         property bool sideSwipeSettling: false
+        property bool hoverExpandedActive: false
         readonly property int defaultAutoHideInterval: 1250
         readonly property int notificationAutoHideInterval: 4200
         readonly property int bluetoothExpandedAutoHideInterval: 2500
@@ -1031,6 +1032,38 @@ PanelWindow {
             interval: mainCapsule.morphDuration
             onTriggered: islandContainer.finishSideSwipeSettle()
         }
+        Timer {
+            id: hoverExpandDelayTimer
+            interval: 350
+            repeat: false
+            onTriggered: {
+                if (!capsuleMouseArea.containsMouse) return;
+                if (!userConfig.enableHoverExpand) return;
+
+                const current = islandContainer.islandState;
+                const target = userConfig.hoverExpandAction === 2 ? "control_center" : "expanded";
+                if (current === target) return;
+                if (current !== "normal" && current !== "custom" && current !== "lyrics")
+                    return;
+
+                islandContainer.hoverExpandedActive = true;
+                if (userConfig.hoverExpandAction === 2)
+                    islandContainer.showControlCenter();
+                else
+                    islandContainer.showExpandedPlayer(false);
+            }
+        }
+        Timer {
+            id: hoverCollapseDelayTimer
+            interval: 250
+            repeat: false
+            onTriggered: {
+                if (capsuleMouseArea.containsMouse) return;
+                if (!islandContainer.hoverExpandedActive) return;
+                islandContainer.hoverExpandedActive = false;
+                islandContainer.smartRestoreState();
+            }
+        }
 
         function syncCustomCapsuleWidth() {
             const view = customSwipeLoader.item;
@@ -1206,6 +1239,7 @@ PanelWindow {
                 enabled: !root.overviewVisible && twoFingerTouchArea.touchPoints.length < 2
                 acceptedButtons: root.dynamicIslandAcceptedButtons
                 preventStealing: true
+                hoverEnabled: userConfig.enableHoverExpand
                 property real swipeStartX: 0
                 property real swipeStartY: 0
                 property real swipeStartProgress: 0
@@ -1222,6 +1256,16 @@ PanelWindow {
                     interval: 180
                     repeat: false
                     onTriggered: capsuleMouseArea.suppressNextClick = false
+                }
+
+                onEntered: {
+                    if (!userConfig.enableHoverExpand) return;
+                    hoverCollapseDelayTimer.stop();
+                    hoverExpandDelayTimer.restart();
+                }
+
+                onExited: {
+                    hoverCollapseDelayTimer.restart();
                 }
 
                 onPressed: (mouse) => {
@@ -1330,6 +1374,10 @@ PanelWindow {
                 }
 
                 onClicked: (mouse) => {
+                    islandContainer.hoverExpandedActive = false;
+                    hoverExpandDelayTimer.stop();
+                    hoverCollapseDelayTimer.stop();
+
                     if (suppressNextClick) {
                         swipeSuppressReset.stop();
                         suppressNextClick = false;
