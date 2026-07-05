@@ -85,19 +85,12 @@ It's built with Quickshell, QML, and C++/Qt 6. Most of the effort went into maki
 ## Features
 
 - Clock
-
 - Music player
-
 - Control Center
-
 - Timer
-
 - Lyrics displayer
-
 - Wallpaper switcher
-
 - Workspace overview
-
 - Custom page
 
 
@@ -116,21 +109,13 @@ It's built with Quickshell, QML, and C++/Qt 6. Most of the effort went into maki
 ### Custom Page
 
 - Time
-
 - Date
-
 - Battery
-
 - Volume
-
 - CPU usage
-
 - Current workspace
-
 - Memory usage
-
 - Brightness
-
 - Cava
 
 <br>
