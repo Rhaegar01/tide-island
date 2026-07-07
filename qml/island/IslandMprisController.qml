@@ -111,6 +111,48 @@ Item {
         plainLyric = extractFirstPlainLyric(inlineLyricsRaw);
     }
 
+    function syncProgress(positionOverride) {
+        let player = root.activePlayer;
+        if (!player) {
+            root.trackProgress = 0;
+            root.timePlayed = "0:00";
+            root.timeTotal = "0:00";
+            return;
+        }
+
+        const currentPosition = positionOverride === undefined
+            ? Number(player.position) || 0
+            : Number(positionOverride) || 0;
+        let totalLength = Number(player.length) || 0;
+        if (totalLength <= 0 && player.metadata && player.metadata["mpris:length"])
+            totalLength = Number(player.metadata["mpris:length"]);
+
+        if (totalLength > 0) {
+            root.trackProgress = Math.max(0, Math.min(1, currentPosition / totalLength));
+            root.timePlayed = root.formatTime(currentPosition);
+            root.timeTotal = root.formatTime(totalLength);
+        } else {
+            root.trackProgress = 0;
+            root.timePlayed = root.formatTime(currentPosition);
+            root.timeTotal = "0:00";
+        }
+    }
+
+    function syncToTrackStart(player) {
+        if (player && player.canSeek && player.positionSupported)
+            player.position = 0;
+
+        syncProgress(0);
+    }
+
+    function previous() {
+        let player = root.activePlayer;
+        if (!player) return;
+
+        player.previous();
+        syncToTrackStart(player);
+    }
+
     function playerHasTrackInfo(player) {
         if (!player) return false;
         if ((player.trackTitle || player.title || "") !== "") return true;
@@ -186,24 +228,6 @@ Item {
         running: root.activePlayer !== null && root.expanded
         repeat: true
 
-        onTriggered: {
-            let player = root.activePlayer;
-            if (!player) return;
-
-            const currentPosition = Number(player.position) || 0;
-            let totalLength = Number(player.length) || 0;
-            if (totalLength <= 0 && player.metadata && player.metadata["mpris:length"])
-                totalLength = Number(player.metadata["mpris:length"]);
-
-            if (totalLength > 0) {
-                root.trackProgress = currentPosition / totalLength;
-                root.timePlayed = root.formatTime(currentPosition);
-                root.timeTotal = root.formatTime(totalLength);
-            } else {
-                root.trackProgress = 0;
-                root.timePlayed = root.formatTime(currentPosition);
-                root.timeTotal = "0:00";
-            }
-        }
+        onTriggered: root.syncProgress()
     }
 }

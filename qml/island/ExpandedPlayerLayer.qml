@@ -10,6 +10,7 @@ Item {
     signal backgroundClicked()
     signal keyboardFocusRequested()
     signal keyboardFocusReleased()
+    signal previousRequested()
     signal timerToggleRequested(int hours, int minutes)
     signal timerResetRequested()
     signal timerDurationRequested(int hours, int minutes)
@@ -454,7 +455,7 @@ Item {
                                         controlPressed();
                                         mouse.accepted = true;
                                     }
-                                    onClicked: if (activePlayer) activePlayer.previous()
+                                    onClicked: root.previousRequested()
                                 }
                             }
 

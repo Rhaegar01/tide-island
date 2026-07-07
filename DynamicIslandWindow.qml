@@ -1867,6 +1867,7 @@ PanelWindow {
                         onBackgroundClicked: islandContainer.smartRestoreState()
                         onKeyboardFocusRequested: islandContainer.requestExpandedPlayerKeyboardFocus()
                         onKeyboardFocusReleased: islandContainer.releaseExpandedPlayerKeyboardFocus()
+                        onPreviousRequested: mediaController.previous()
                         onTimerToggleRequested: function(hours, minutes) {
                             islandContainer.toggleTimer(hours, minutes);
                         }
