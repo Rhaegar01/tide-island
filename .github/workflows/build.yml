@@ -34,6 +34,7 @@ jobs:
       - name: Build package
         run: |
           chown -R builder:builder "$GITHUB_WORKSPACE"
+          su builder -c "git config --global --add safe.directory '$GITHUB_WORKSPACE'"
           cd "$GITHUB_WORKSPACE"
           git archive --prefix=Tide-island-1.0.20/ --format=tar.gz -o tide-island-1.0.20.tar.gz HEAD
           su builder -c "cd '$GITHUB_WORKSPACE' && makepkg --noconfirm"
