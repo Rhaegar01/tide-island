@@ -1,0 +1,46 @@
+name: Build Arch Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git cmake qt6-base qt6-declarative qt6-wayland qt6-connectivity qt6-svg hyprland wireplumber pipewire dbus libpulse systemd-libs brightnessctl hyprsunset upower bluez bluez-utils quickshell
+
+      - name: Create build user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: /home/builder/pkg
+
+      - name: Build package
+        env:
+          PKGEXT: .pkg.tar.zst
+        run: |
+          chown -R builder:builder /home/builder/pkg
+          cd /home/builder/pkg
+          git archive --prefix=Tide-island-1.0.20/ --format=tar.gz -o tide-island-1.0.20.tar.gz HEAD
+          su builder -c "makepkg --noconfirm"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tide-island-pkg
+          path: /home/builder/pkg/*.pkg.tar.zst

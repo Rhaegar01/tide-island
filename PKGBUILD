@@ -3,7 +3,6 @@ pkgname=tide-island
 pkgver=1.0.20
 pkgrel=1
 _srcdir=Tide-island-$pkgver
-_builddir=build-$pkgver
 pkgdesc="A dynamic island for Hyprland using Quickshell"
 arch=('x86_64')
 url="https://github.com/enhaoswen/Tide-island"
@@ -42,18 +41,18 @@ optdepends=(
 )
 conflicts=('tide-island-git')
 install='tide-island.install'
-source=("$pkgname-$pkgver.tar.gz::https://github.com/enhaoswen/Tide-island/archive/refs/tags/$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
-  cmake -S "$_srcdir" -B "$_builddir" \
+  cmake -S "$_srcdir" -B build \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release
-  cmake --build "$_builddir"
+  cmake --build build
 }
 
 package() {
-  DESTDIR="$pkgdir" cmake --install "$_builddir"
+  DESTDIR="$pkgdir" cmake --install build
   rm -f "$pkgdir/usr/lib/qt6/qml/TideIsland/tide-island-config-app_qml_module_dir_map.qrc"
   chmod +x "$pkgdir/usr/bin/tide-island"
   chmod +x "$pkgdir/usr/bin/tide-island-config-app"
