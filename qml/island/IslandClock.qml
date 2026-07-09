@@ -35,7 +35,7 @@ Item {
 
         onTriggered: {
             const now = new Date();
-            root.currentTime = Qt.formatTime(now, "HH:mm");
+            root.currentTime = "\uF090B " + Qt.formatTime(now, "HH:mm");
             root.currentDateLabel = root.formatDateLabel(now);
             interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
         }

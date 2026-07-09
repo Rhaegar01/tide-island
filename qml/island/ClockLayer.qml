@@ -30,27 +30,15 @@ Item {
         x: contentOffsetX
         clip: true
 
-        Row {
+        Text {
             anchors.centerIn: parent
-            spacing: 6
-
-            Text {
-                text: "\uF017"
-                color: "white"
-                font.pixelSize: textPixelSize
-                font.family: userConfig.iconFontFamily
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                text: currentTime
-                color: "white"
-                font.pixelSize: textPixelSize
-                font.family: heroFontFamily
-                font.weight: Font.Bold
-                font.letterSpacing: -0.35
-                wrapMode: Text.NoWrap
-            }
+            text: currentTime
+            color: "white"
+            font.pixelSize: textPixelSize
+            font.family: heroFontFamily
+            font.weight: Font.Bold
+            font.letterSpacing: -0.35
+            wrapMode: Text.NoWrap
         }
     }
 }
