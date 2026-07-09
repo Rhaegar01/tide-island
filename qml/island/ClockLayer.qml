@@ -30,15 +30,28 @@ Item {
         x: contentOffsetX
         clip: true
 
-        Text {
+        Row {
             anchors.centerIn: parent
-            text: currentTime
-            color: "white"
-            font.pixelSize: textPixelSize
-            font.family: heroFontFamily
-            font.weight: Font.Bold
-            font.letterSpacing: -0.35
-            wrapMode: Text.NoWrap
+            spacing: 8
+
+            Text {
+                text: "\u{F017}"
+                color: "white"
+                font.pixelSize: textPixelSize * 0.75
+                font.family: activeConfig.iconFontFamily
+                anchors.baseline: timeText.baseline
+            }
+
+            Text {
+                id: timeText
+                text: currentTime
+                color: "white"
+                font.pixelSize: textPixelSize
+                font.family: heroFontFamily
+                font.weight: Font.Bold
+                font.letterSpacing: -0.35
+                wrapMode: Text.NoWrap
+            }
         }
     }
 }
